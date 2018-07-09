@@ -7,6 +7,7 @@ import easygopigo3 as easy
 import gopigo3 as go
 from six.moves import input
 import time
+import pygame
 
 #Tensorflow stuff
 import os.path
@@ -28,6 +29,9 @@ SENSOR = None
 SERVO = None
 SLEEP_TIME = 0.3
 PORT = 'I2C1'
+
+pygame.mixer.init()
+snap = pygame.mixer.Sound("sounds/snap.wav")
 
 def init_sensor():
     """
@@ -299,6 +303,7 @@ class NodeLookup(object):
         
 node_lookup = None
 
+
 def create_graph():
     """Creates a graph from saved GraphDef file and returns a saver."""
     # Creates graph from saved graph_def.pb.
@@ -307,6 +312,7 @@ def create_graph():
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
         _ = tf.import_graph_def(graph_def, name='')
+
 
 def run_inference_on_image(image):
     """Runs inference on an image.
@@ -372,6 +378,7 @@ def run_inference_on_image(image):
         print('Took: %0.4f' % (time.time() - start_time))
         return results, score
 
+
 def maybe_download_and_extract():
     """Download and extract model tar file."""
     dest_directory = FLAGS.model_dir
@@ -394,25 +401,36 @@ def maybe_download_and_extract():
         print('Succesfully downloaded', filename, statinfo.st_size, 'bytes.')
     tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
+
 def init_eyes():
-	FLAGS.model_dir = '/home/pi/inception'
-	print("Opening eyes...")
-	maybe_download_and_extract()
-	global node_lookup
-	if node_lookup is None:
-		node_lookup = NodeLookup()
-	
-	start_time = time.time()
-	create_graph()
-	graph_time = time.time() - start_time
-	print('Eyes open! in ', graph_time)
-	
-  
+    FLAGS.model_dir = '/home/pi/inception'
+    print("Opening eyes...")
+    maybe_download_and_extract()
+    global node_lookup
+    if node_lookup is None:
+        node_lookup = NodeLookup()
+
+    start_time = time.time()
+    create_graph()
+    graph_time = time.time() - start_time
+    print('Eyes open! in ', graph_time)
+
+
 def see(image='/tmp/tmp.jpeg'):
     return run_inference_on_image(image)
 
+
+def speak(string):  # Added speak function using eSpeak
+    os.system("espeak -ven+f4 -a200 -p100 -s130 '%s' " % string)
+    print("I'm speaking!")
+
+
 def snap(image='/tmp/tmp.jpeg'):
-	camera = PiCamera()
-	sleep(1)
-	camera.capture(image)
-	camera.close()
+    camera = PiCamera()
+    sleep(1)
+    camera.capture(image)
+    camera.close()
+    # Plays sound using PyGame library for greater feedback
+    snap.play()
+    time.sleep(2)
+    snap.stop()
